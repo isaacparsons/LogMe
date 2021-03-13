@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { Text, View, FlatList, StyleSheet, ScrollView, Modal, TextInput, Button, TouchableWithoutFeedback, Dimensions } from 'react-native'
 import { PRIMARY } from '../Constants/Colors'
-import AddNewActivityCard from './AddNewActivityCard'
-import { createActivity, getActivitiesAndPopularity } from '../helpers/ActivityHelper'
+import { createActivity, getActivitiesAndPopularity, doesActivityExistInDate } from '../helpers/ActivityHelper'
 import { formatDate } from '../helpers/Date'
-import { Icon } from 'react-native-elements'
 import UpdateActivityCard from './UpdateActivityCard'
+import ActivityDetailsCard from './ActivityDetailsCard'
+import UpdateActivityModal from './UpdateActivityModal'
 
 const TIME_SLOT_HEIGHT = 120
 const HEIGHT = 24 * TIME_SLOT_HEIGHT
@@ -19,6 +19,8 @@ export default function ActivitiesFlatlist(props) {
     } = props
     const [modal_visible, setModalVisible] = useState(false);
     const [selected_item, setSelectedItem] = useState(null)
+    const [activity_error, setActivityError] = useState({error: false, error_message: null})
+    const [time_error, setTimeError] = useState({error: false, error_message: null})
     var activity_info = getActivitiesAndPopularity(activities)
 
     onDelete = () => {
@@ -27,14 +29,31 @@ export default function ActivitiesFlatlist(props) {
     }
 
     onUpdate = (activity) => {
-        
         updateActivity(activity)
         setModalVisible(false)
     }
 
     onAddActivity = (activity) => {
-        let new_activity = createActivity(activity.activity, activity.start_time, activity.end_time)
-        addActivity(new_activity)
+        let is_time_error = doesActivityExistInDate(activities, activity.start_time) || doesActivityExistInDate(activities, activity.end_time)
+        let is_activity_error = activity.activity == "" ? true : false
+        if(is_time_error || is_activity_error){
+            if(is_activity_error){
+                setActivityError({
+                    error: true,
+                    error_message: "Please enter an activity name"
+                })
+            }
+            if(is_time_error){
+                setTimeError({
+                    error: true,
+                    error_message: "Activity already exists there"
+                })
+            }
+        } else {
+            setTimeError({error: false, error_message: null})
+            let new_activity = createActivity(activity.activity, activity.start_time, activity.end_time)
+            addActivity(new_activity)
+        }
     }
 
     handleActivityCardPress = (item) => {
@@ -45,16 +64,21 @@ export default function ActivitiesFlatlist(props) {
     footerComponent = () => {
         if(footer_enabled){
             return(
-                <AddNewActivityCard 
+                <ActivityDetailsCard 
+                    button_text = {"Log"}
+                    activity_error = {activity_error}
+                    time_error = {time_error}
                     activity_info = {activity_info}
-                    addActivity = {onAddActivity}/>  )
+                    onPress = {onAddActivity}/>)
         } else {return null}
     }
 
     return (
         <ScrollView>
-            <ActivityModal 
+            <UpdateActivityModal 
                 visible = {modal_visible} 
+                activity_error = {activity_error}
+                time_error = {time_error}
                 activity_info = {activity_info}
                 setVisible = {setModalVisible}
                 selected_item = {selected_item}
@@ -68,6 +92,7 @@ export default function ActivitiesFlatlist(props) {
                     <View style = {styles.flatlist_container}>
                         <FlatList
                             // initialScrollIndex = {5}
+                            
                             scrollEnabled={false}
                             data={activities}
                             renderItem={({item, index}) => <ActivityCard 
@@ -92,7 +117,10 @@ const ActivityCard = (props) => {
     start_time = new Date(start_time)
     end_time = new Date(end_time)
     var length = (end_time.getTime() - start_time.getTime()) / (3600 * 1000)
-    var margin_top = last_item ? (start_time.getTime() - new Date(last_item.end_time).getTime()) / (3600 * 1000) : 0
+    var now = new Date()
+    var d = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    var first_item_margin = (start_time.getTime() - d.getTime()) / (3600 * 1000)
+    var margin_top = last_item ? (start_time.getTime() - new Date(last_item.end_time).getTime()) / (3600 * 1000) : first_item_margin
     
     var start_time_formatted = formatDate(start_time).hour
     var end_time_formatted = formatDate(end_time).hour
@@ -122,54 +150,7 @@ const TimeAxis = () => {
     )
 }
 
-const ActivityModal = (props) => {
-    var {
-        visible, 
-        setVisible, 
-        selected_item,
-        onDelete,
-        onUpdate,
-        activity_info
-    } = props
-    var modal_width = 300
-    var modal_height = 500
-    var left_offset = (Dimensions.get('window').width / 2) - (modal_width / 2)
-    var top_offset = (Dimensions.get('window').height / 2) - (modal_height / 2)
-    if(visible){
-        return (
-            <Modal
-                animationType="fade"
-                transparent={true}
-                visible={visible}
-                onRequestClose={() => {
-                    setVisible(false);
-                }}>
-                <View>
-                    <TouchableWithoutFeedback onPress = {() => setVisible(false)}>
-                        <View style = {{height: '100%', width: '100%', backgroundColor: 'rgba(0, 0, 0, 0.5)'}}/>
-                    </TouchableWithoutFeedback>
-                    <View style = {{position: 'absolute', left: left_offset, top: top_offset, height: modal_height, width: modal_width, backgroundColor: 'white'}}>
-                        <View style = {{flex: 1, padding: 10}}>
-                            <View style = {{flexDirection: 'row', justifyContent: 'flex-end'}}>
-                                <Icon 
-                                    name = {"delete"}
-                                    raised
-                                    reverse
-                                    color="#000"
-                                    onPress={onDelete}/>
-                            </View>
-                            <UpdateActivityCard
-                                activity_info = {activity_info}
-                                activity = {selected_item}
-                                updateActivity = {onUpdate}
-                                button_text = {"update"}/>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-        )
-    } else return null
-}
+
 
 const styles = StyleSheet.create({
     container: {

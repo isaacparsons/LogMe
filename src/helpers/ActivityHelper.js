@@ -63,3 +63,14 @@ export const filterActivitiesByDate = (activities, date) => {
   })
   return new_activities
 }
+
+export const doesActivityExistInDate = (activities, date) => {
+  var does_exist = false
+  activities.forEach((element) => {
+    if((new Date(date).getTime() >= new Date(element.start_time).getTime()) && 
+      new Date(date).getTime() <= new Date(element.end_time).getTime()){
+        does_exist = true
+      }
+  })
+  return does_exist
+}

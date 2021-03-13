@@ -4,36 +4,46 @@ import DateTimePicker from '@react-native-datetimepicker/datetimepicker'
 import { 
     filterSuggestedActivities, 
     sortByPopularity,  
-    getActivityNames, 
-    createActivity} from '../helpers/ActivityHelper'
+    getActivityNames} from '../helpers/ActivityHelper'
 
-export default AddNewActivityCard = (props) => {
+export default ActivityDetailsCard = (props) => {
     var {activity_info, 
         button_text,
+        start_time,
+        end_time,
+        activity,
+        onPress,
         activity_error,
         time_error
     } = props
 
-    const [activity_text, setActivityText] = useState("")
-    const [start_time_text, setStartTime] = useState(new Date())
-    const [end_time_text, setEndTime] = useState(new Date())
+    const [activity_text, setActivityText] = useState(activity || "")
+    const [start_time_text, setStartTime] = useState(start_time || new Date())
+    const [end_time_text, setEndTime] = useState(end_time || new Date())
 
     var filtered_suggested_activities = filterSuggestedActivities(activity_info, activity_text)
     var sorted_filtered_suggested_activities = sortByPopularity(filtered_suggested_activities)
-
     return(
-        <View style = {{...styles.add_activity_card_container, height:350}}>
-            <View style = {styles.text_input_container}>
-                <TextInput 
-                    style = {styles.text_input} 
-                    maxLength={20}
-                    onChangeText={text => setActivityText(text)}
-                    value={activity_text}/>
-            </View>
+        <View style = {{...styles.add_activity_card_container}}>
+            <WrapError 
+                error={activity_error.error} 
+                error_message = {activity_error.error_message}
+                style = {styles.text_input_container}>
+                <View style = {{flex: 1, flexDirection: 'row'}}>
+                    <TextInput 
+                        style = {styles.text_input} 
+                        maxLength={20}
+                        onChangeText={text => setActivityText(text)}
+                        value={activity_text}/>
+                </View>
+            </WrapError>
             <SuggestedActivities
                 activities = {getActivityNames(sorted_filtered_suggested_activities)}
                 onPress = {activity => setActivityText(activity)}/> 
-            <View style = {styles.time_container}>
+            <WrapError 
+                error={time_error.error} 
+                error_message = {time_error.error_message}
+                style = {styles.time_container}>
                 <View style = {styles.time_row}>
                     <Text style = {styles.time_text}>{"Start: "}</Text>
                     <DateTimePicker
@@ -58,15 +68,27 @@ export default AddNewActivityCard = (props) => {
                         onChange={(event, date) => setEndTime(date)}
                         />
                 </View>
-            </View>
+            </WrapError>
             <View style = {{flex: 1, backgroundColor: 'violet'}}>
                 <Button 
                     style = {{flex: 1}} 
-                    title = {button_text || "Log" }
-                    onPress={() => addActivity({
+                    title = {button_text}
+                    onPress={() => onPress({
                         activity: activity_text, 
                         start_time: start_time_text, 
                         end_time: end_time_text})}/>
+            </View>
+        </View>)
+}
+
+const WrapError = (props) => {
+    var {error, style, error_message} = props
+    var border_color = error ? 'red' : '#2b2b2b'
+    return (
+        <View style = {{flex: 1}}>
+            {error ? <Text style = {{flex: 1}}>{error_message}</Text> : null}
+            <View style = {{...style, borderColor: border_color}}>
+                {props.children}
             </View>
         </View>)
 }
@@ -96,6 +118,7 @@ const styles = StyleSheet.create({
         margin: 2,
         borderWidth: 2,
         borderColor: '#2b2b2b',
+        // height: 50,
         flex: 1, 
         flexDirection: 'row', 
         alignItems: 'center',
@@ -105,22 +128,26 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         margin: 2,
         borderColor: '#2b2b2b',
-        flex: 3, 
+        height: 120,
         flexDirection: 'row', 
+        // height: 200,
         flexWrap: 'wrap'
     },
     time_container: {
-        flex: 2, 
-        padding: 5,
-        borderWidth: 2,
         borderRadius:5,
+        borderWidth: 2,
+        margin: 2,
         borderColor: '#2b2b2b',
+        flex: 2, 
+        // height: 110,
+        padding: 5,
         margin: 2,
     },
     log_button_container: {
 
     },
     add_activity_card_container: {
+        flex: 1,
         padding: 5,
         borderRadius:10,
         borderWidth: 1,
@@ -131,14 +158,16 @@ const styles = StyleSheet.create({
         fontSize: 14
     },
     time_row : {
+        // height: 50,
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center'
     },
     text_input: {
-        flex: 3, 
         borderBottomColor: '#000', 
         borderBottomWidth: 1, 
-        margin: 10
+        margin: 10,
+        flex: 1
     }
 })
 
